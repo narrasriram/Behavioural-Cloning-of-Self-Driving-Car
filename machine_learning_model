@@ -1,0 +1,166 @@
+# First the necessary libraries are imported
+import random
+import numpy as np
+import matplotlib.pyplot as plt
+import keras
+import matplotlib.image as mpimg
+import cv2
+import pandas as pd
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import Convolution2D, MaxPooling2D, Dropout, Flatten
+from keras.optimizers import Adam
+from imgaug import augmenters as ia
+import os, ntpath           
+
+# Load the data with the desired names for the columns. Since we will work with the center images manipulate only center’s images addresses to be work with them more easily in future.
+
+data = pd.read_csv("SelfDriving/driving_log.csv", names = ["center", "left", "right", "steering", "throttle", "reverse", "speed"])
+print(data.head())
+data['center'] = data['center'].apply(lambda x: ntpath.basename(x))
+print(data.head())
+
+# Draw a histogram of the images in each steering angel bin.
+hist, bins = np.histogram(data['steering'], 25)
+centered_bins = (bins[:-1] + bins[1:]) / 2.0
+plt.bar(centered_bins, hist, width = 0.04)
+plt.xlabel("steering angle")
+threshold = 300
+plt.plot((-1, 1), (threshold, threshold))
+plt.show()
+
+# Remove the a number of images beyond the desired threshold at random
+
+from sklearn.utils import shuffle
+to_be_removed = []                                                             
+for i in range(25):
+  lst = []                                                                      
+  for j in range(len(data['steering'])):
+    if data['steering'][j] <= bins[i+1] and data['steering'][j] >= bins[i]:     
+      lst.append(j)
+  lst = shuffle(lst)                                                            
+  to_be_removed.extend(lst[threshold:])
+
+# Draw a histogram of images after the bins are curtailed to the threshold.
+
+data.drop(data.index[to_be_removed], inplace=True)
+hist, b = np.histogram(data['steering'], 25)
+centered_bins = (b[:-1] + b[1:]) / 2.0
+plt.bar(centered_bins, hist, width = 0.04)
+threshold = 300
+plt.plot((-1, 1), (threshold, threshold))
+plt.show()
+
+# Split the data into train and test sets
+
+from sklearn.model_selection import train_test_split
+imagepath = np.array(data['center'])
+steer = np.array(data['steering'])
+X_train, X_test, y_train, y_test = train_test_split(imagepath, steer, test_size = 0.2, random_state = 1)
+print(X_test.shape, X_test[0])
+
+# Define the augmenting functions 
+
+def zoom(image):
+  zoom = ia.Affine(scale=(1, 1.3))
+  image = zoom.augment_image(image)
+  return image
+
+def pan(image):
+  pan = ia.Affine(translate_percent={"x": (-0.1, 0.1), "y":(-0.1, 0.1)})
+  image = pan.augment_image(image)
+  return image
+
+def darken(image):
+  darken = ia.Multiply((0.2, 1.2))                      
+  image = darken.augment_image(image)
+  return image
+
+def flip(image, steering):
+  image = cv2.flip(image, 1)                    
+  steering = -1*steering
+  return image, steering
+
+# With the help of the augmenting functions, build an augmenter which will apply randomly some (in some cases may never apply any) of those function to each image received as input. 
+
+def augmentor(image, steering):
+  image = mpimg.imread(os.path.join('SelfDriving', 'IMG', image))
+  if np.random.rand() > 0.5:               
+    image = zoom(image)
+  if np.random.rand() > 0.5:
+    image = pan(image)
+  if np.random.rand() > 0.5:
+    image = darken(image)
+  if np.random.rand() > 0.5:
+    image, steering = flip(image, steering)
+  return image, steering
+
+# The preprocessor is defined to modify each augmented (or maybe even not augmented) instance to best suit the Nvidia specifications.
+
+def preprocess(image):
+  image = image[60:137, :, :]                                                   
+  image = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)                               
+  image = cv2.GaussianBlur(image, (3, 3), 0)                                    
+  image = cv2.resize(image, (200, 66))                                          
+  image = image / 255
+  return image
+
+# The following is a batch generator, using the augmenter and the preprocessor would generate batches of data to be fed to the network. Note that the while loop is indefinite as we are able to produce as much images as we want to train or network on. This number is determined when calling the Nvidia model to fit the data.
+
+def batch_generator(images, steerings, batch_size, train):
+  while True:
+    imagebatch = []
+    steerbatch = []
+    indices = np.random.randint(len(images), size=batch_size)
+    if train:
+      maps = list(map(augmentor, images[indices], steerings[indices]))
+      imagebatch, steerbatch = zip(*maps)
+    else:
+      imagebatch = list(map(mpimg.imread, 'SelfDriving/' + 'IMG/' + images[indices]))
+      steerbatch = steerings[indices]
+      
+    imagebatch = list(map(preprocess, imagebatch))
+    yield (np.asarray(imagebatch), np.asarray(steerbatch))
+
+# Define the Nvidia network (adding the convolutional layers and the dense layers and etc.)
+
+def nvidia():
+  model = Sequential()
+  model.add(Convolution2D(24, (5, 5), subsample=(2, 2), input_shape=(66, 200, 3), activation='elu'))
+  model.add(Convolution2D(36, (5, 5), subsample=(2, 2), activation='elu'))
+  model.add(Convolution2D(48, (5, 5), subsample=(2, 2), activation='elu'))
+  model.add(Convolution2D(64, (3, 3), activation='elu'))                        
+  model.add(Convolution2D(64, (3, 3), activation='elu'))
+  model.add(Dropout(0.0))
+  model.add(Flatten())
+  model.add(Dense(100, activation='elu'))
+  model.add(Dropout(0.0))
+  model.add(Dense(50,  activation='elu'))
+  model.add(Dropout(0.0))
+  model.add(Dense(10,  activation='elu'))
+  model.add(Dropout(0.2))
+  model.add(Dense(1))
+  model.compile(optimizer=Adam(0.001), loss='mse')
+  return model
+
+
+# Fit the model to the data with desired hyper parameters as defined below.
+
+model = nvidia()
+print(model.summary())
+history = model.fit_generator(batch_generator(X_train, y_train, batch_size=100, train=1), steps_per_epoch=300, epochs=10, validation_data = batch_generator(X_test, y_test, batch_size=100, train=0), validation_steps=200, verbose=1, shuffle=1) 
+
+# Plot the training and validation loss.
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.legend(['training', 'validation'])
+plt.title('loss')
+plt.xlabel('Epoch')
+
+# Save this model and download it to be used in the code for the local server.
+
+model.save('NvidiaModel.h5')
+
+from google.colab import files
+files.download('NvidiaModel.h5') 
