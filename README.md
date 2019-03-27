@@ -2,11 +2,12 @@
 Towards a trend in bridging the gap of building the Self-Driving vehicles using Convolutional Neural Networks, cloning the behavior of a trained vehicle data onto another platform could be a challenging task to deal with random obstacles like biased nature in data. The most general case could be observed when training the vehicle on a one way circular track and transfer that knowledge to a vehicle on different track. In this project, NVidia model of Convolutional Neural Networks is used to train the car with required Data Augmentation techniques to reduce the influence of biased data in detecting the steering angle of the Vehicle. The initial training to the car in a circular track of simulator has been given in clockwise, anticlockwise directions. The error prone zones are analyzed and provided more information with different image manipulation techniques. Transferred knowledge of the generalized trained data has been tested on a different track in the simulator with required augmentation techniques induced.
 
 
-Summary of the First Model
+# Summary of the First Model
+
 The following is the summary of the first network, without the dropout layers and with the learning rate of 0.01. Note that this model was tested before on not augmented data set.
 _________________________________________________________________
 Layer (type)                 Output Shape              Param #   
-=================================================================
+_________________________________________________________________
 conv2d_1 (Conv2D)            (None, 31, 98, 24)        1824      
 _________________________________________________________________
 conv2d_2 (Conv2D)            (None, 14, 47, 36)        21636     
@@ -32,10 +33,12 @@ Trainable params: 252,219
 Non-trainable params: 0
 
 
-Summary of the Final Model
+# Summary of the Final Model
+
 The following is the summary for the final model.
+_________________________________________________________________
 Layer (type)                 Output Shape              Param #   
-=================================================================
+_________________________________________________________________
 conv2d_6 (Conv2D)            (None, 31, 98, 24)        1824      
 _________________________________________________________________
 conv2d_7 (Conv2D)            (None, 14, 47, 36)        21636     
