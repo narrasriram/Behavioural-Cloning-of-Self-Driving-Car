@@ -1,6 +1,7 @@
 # Behavioural-Cloning-of-Self-Driving-Car
 Towards a trend in bridging the gap of building the Self-Driving vehicles using Convolutional Neural Networks, cloning the behavior of a trained vehicle data onto another platform could be a challenging task to deal with random obstacles like biased nature in data. The most general case could be observed when training the vehicle on a one way circular track and transfer that knowledge to a vehicle on different track. In this project, NVidia model of Convolutional Neural Networks is used to train the car with required Data Augmentation techniques to reduce the influence of biased data in detecting the steering angle of the Vehicle. The initial training to the car in a circular track of simulator has been given in clockwise, anticlockwise directions. The error prone zones are analyzed and provided more information with different image manipulation techniques. Transferred knowledge of the generalized trained data has been tested on a different track in the simulator with required augmentation techniques induced.
 
+
 Summary of the First Model
 The following is the summary of the first network, without the dropout layers and with the learning rate of 0.01. Note that this model was tested before on not augmented data set.
 _________________________________________________________________
@@ -25,7 +26,7 @@ _________________________________________________________________
 dense_3 (Dense)              (None, 10)                510       
 _________________________________________________________________
 dense_4 (Dense)              (None, 1)                 11        
-=================================================================
+_________________________________________________________________
 Total params: 252,219
 Trainable params: 252,219
 Non-trainable params: 0
@@ -60,7 +61,7 @@ _________________________________________________________________
 dropout_6 (Dropout)          (None, 10)                0         
 _________________________________________________________________
 dense_8 (Dense)              (None, 1)                 11        
-=================================================================
+_________________________________________________________________
 Total params: 252,219
 Trainable params: 252,219
 Non-trainable params: 0
