@@ -219,7 +219,6 @@ The model was able to drive the car safely through the track without leaving the
 ### First Track:
 [![First Track](./Images/driving.PNG)](https://youtu.be/EWvqiYJnKfY)
 
-**[YouTube Link](https://youtu.be/EWvqiYJnKfY)**
 
 
 ---
